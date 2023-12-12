@@ -15,8 +15,7 @@
   background-color: #3498db;
   color: #ffffff;
   padding: 10px 20px;
-  border-radius: 5px;
-}
+  border-radius: 5px;}
 
 .form-container .button-sendEmail:hover {
   background-color: #266d9d;
@@ -47,8 +46,18 @@
   background-color: #2a5703;
 }
 
+.dropdown-container {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  justify-content: space-around;
+  gap: 10px;
+}
+
 .dropdown {
-  width: 40%;
+  width: 100%;
 }
 
 div.text p {

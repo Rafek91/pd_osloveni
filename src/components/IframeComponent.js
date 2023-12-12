@@ -145,16 +145,28 @@ function IframeComponent() {
               <div className="text">
                 <p>Zvolte prosím, které z vašich polí je určeno pro oslovení. Je nutné, aby toto pole mělo datový typ "Text". <br />Pokud pole ještě nemáte vytvořeno, tak jej prosím vytvořte a pak proveďte výběr.</p>
               </div>
-                <Select
-                options={dropdown}
-                className="dropdown"
-                placeholder="Vyberte pole oslovení"
-                isDisabled={dropdownAvailability}
-                value={dropdownValue}
-                onChange={(item)=>{
-                  setDropdownValue(item)
-                }}
-                />
+                <div className="dropdown-container">
+                  <Select
+                  options={dropdown}
+                  className="dropdown"
+                  placeholder="Vyberte pole oslovení"
+                  isDisabled={dropdownAvailability}
+                  value={dropdownValue}
+                  onChange={(item)=>{
+                    setDropdownValue(item)
+                  }}
+                  />
+                  <Select
+                  options={dropdown}
+                  className="dropdown"
+                  placeholder="Vyberte preferovaný typ oslovení"
+                  isDisabled={dropdownAvailability}
+                  value={dropdownValue}
+                  onChange={(item)=>{
+                    setDropdownValue(item)
+                  }}
+                  />
+                </div>
                 <button onClick={submitButton}>Potvrdit</button>
                 <button className="button-sendEmail" onClick={open}>
                  E-mail&nbsp;<MdEmail />
