@@ -12,7 +12,7 @@ function IframeComponent() {
   const serverURL = process.env.REACT_APP_SERVER_URL
 
   const referrer = document.referrer
-  const regexPattern = '\.pipedrive.com'
+  const regexPattern = '.pipedrive.com'
   const testDomain = new RegExp(regexPattern).test(referrer)
 
   const [dropdown,setDropdown] = useState([])
@@ -20,7 +20,6 @@ function IframeComponent() {
   const [dropdownAvailability,setDropdownAvailability] = useState(false)
   const [dropdownValue,setDropdownValue] = useState(null)
   const [isOpen,setIsOpen] = useState(false)
-  const [token,setToken] = useState('')
 
   const location = useLocation()
   const searchParams = new URLSearchParams(location.search)
@@ -75,7 +74,7 @@ function IframeComponent() {
   }, [reqId]);
 
 
-  if(!referrer) {
+  if(!testDomain) {
 
     const submitButton = async () => {
       try {
