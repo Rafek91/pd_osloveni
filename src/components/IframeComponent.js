@@ -66,7 +66,7 @@ function IframeComponent() {
 
   useEffect(() => {
     fetchOrgFields()
-  },[])
+  },)
   
   useEffect(() => {
     if (reqId) {
