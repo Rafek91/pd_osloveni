@@ -7,14 +7,13 @@ import 'react-toastify/dist/ReactToastify.css';
 import MessageModal from "./MessageModal";
 import { MdEmail } from "react-icons/md";
 
-console.log('kokot')
-
 function IframeComponent() {
   const serverURL = process.env.REACT_APP_SERVER_URL
 
   const referrer = document.referrer
   const regexPattern = '\.pipedrive.com'
   const testDomain = new RegExp(regexPattern).test(referrer)
+  console.log(testDomain)
 
   const [customFieldsDropdown,setCustomFieldsDropdown] = useState([])
   const [SDK,setSDKinstance] = useState(null)
