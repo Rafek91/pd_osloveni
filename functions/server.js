@@ -81,6 +81,27 @@ const createPipedriveOrganizationWebhook = async(hookdeckUrl,apiClient) => {
     }
 }
 
+const checkSalutation = async (firstName,lastName) => {
+    const sklovaniUrl = 'https://www.sklonovani-jmen.cz/api'
+    const apiKey = process.env.SKLONOVANI_API_KEY
+    try {
+        const sklonovaniRequest = await axios.get(sklovaniUrl,{
+            params:{
+                klic:apiKey,
+                pad:5,
+                jmeno:`${firstName} ${lastName}`,
+                'pouzit-krestni':'ano'
+            }
+        })
+        const sklonovaniResponse = await sklonovaniRequest.data
+        console.log(sklonovaniResponse)
+
+        return sklonovaniResponse
+    } catch (error) {
+        console.error("error when fetching data from Sklonovani.cz",error)
+    }
+}
+
 app.get('/test', async (req, res) => {
     const sklovaniUrl = 'https://www.sklonovani-jmen.cz/api'
     const apiKey = process.env.SKLONOVANI_API_KEY
@@ -102,11 +123,26 @@ app.get('/test', async (req, res) => {
 })
 
 app.get('/testPd', async (req, res) => {
-    const apiClient = await pdApiClient('10703868:3000557:6dc6205464f3bb5dc13bf57c5abef23a27ab99fa','10703868:3000557:25ea4f63883888fe9a6ea50af98e00735699d90f')
+    console.log(req.body)
+    const {firstName,lastName,companyId,userId,organizationId} = req.body
 
-    const userApi = new pipedrive.UsersApi(apiClient)
-    const userData = await userApi.getCurrentUser()
-    console.log(userData)
+    const updatePipedriveField = async () => {
+        try{
+            const userApi = new pipedrive.PersonsApi(pdApiClient)
+            const customFieldId = '12345' // zjistit z firebase
+            const salutationType = 'short' // zjistit z firebase, pokud je prázdné, použít "Dobrý den, pane Nováku"
+            const getSalutation = await checkSalutation(firstName,lastName)
+
+            console.log("get salutation",getSalutation)
+
+/*             const userData = await userApi.getCurrentUser()
+ */        } catch(e) {
+            console.log("error when calling Pipedrive/me",e)
+        }
+    }
+
+    updatePipedriveField()
+
 })
 
 app.get('/api/installation', async (req, res) => {
