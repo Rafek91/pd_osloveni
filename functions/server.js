@@ -5,11 +5,14 @@ const axios = require('axios')
 const dotenv = require('dotenv').config()
 const pdApiClient = require('./utils/pipedriveApiClient')
 const pipedrive = require('pipedrive')
+const jwt = require('jsonwebtoken');
 
 const app = express()
 
 app.use(cors())
 
+
+const appUrl = process.env.APP_URL
 const getPipedriveUserData = async(apiClient) => {
     try{
         const userApi = new pipedrive.UsersApi(apiClient)
@@ -95,54 +98,30 @@ const checkSalutation = async (firstName,lastName) => {
         })
         const sklonovaniResponse = await sklonovaniRequest.data
         console.log(sklonovaniResponse)
-
         return sklonovaniResponse
     } catch (error) {
         console.error("error when fetching data from Sklonovani.cz",error)
     }
 }
 
-app.get('/test', async (req, res) => {
-    const sklovaniUrl = 'https://www.sklonovani-jmen.cz/api'
-    const apiKey = process.env.SKLONOVANI_API_KEY
-    try {
-        const sklonovaniRequest = await axios.get(sklovaniUrl,{
-            params:{
-                klic:apiKey,
-                pad:5,
-                jmeno:'PetrSvetr'
-            }
-        })
-        const sklonovaniResponse = await sklonovaniRequest.data
-        console.log(sklonovaniResponse)
-
-        res.send(sklonovaniResponse)
-    } catch (error) {
-        console.error("error when fetching data from Sklonovani.cz",error)
-    }
-})
-
-app.get('/testPd', async (req, res) => {
+app.post('/testPd', async (req, res) => {
     console.log(req.body)
-    const {firstName,lastName,companyId,userId,organizationId} = req.body
+    const {firstName,lastName,person_id:personId,user_id:userId,company_id:companyId} = req.body
 
     const updatePipedriveField = async () => {
         try{
-            const userApi = new pipedrive.PersonsApi(pdApiClient)
-            const customFieldId = '12345' // zjistit z firebase
-            const salutationType = 'short' // zjistit z firebase, pokud je prázdné, použít "Dobrý den, pane Nováku"
+            const personApi = new pipedrive.PersonsApi(pdApiClient('v1:AQIBAHj+LzTNK2yuuuaLqifzhWb9crUNKTpk4FlQ9rjnXqp/6AG2kjYcnaOf62rtuKdznqAtAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMLyK+JBzc8G859V3BAgEQgDtqKqOkc+0lOEfcOs4gtQwH/dqrugrLSyItXcEDqK862cZlI4alVBNX/u+LuUyKW7sDHwEX8S3YQOBVIw==:/M4h+zmuL80fpON0UkQir/viLwKDch3ybTBJLvc0M0jE72LxCPY9gmL0UjOB9cu2+brntZ+8SyKXdMvV4vTd3OcQ6ZHReMRfnGsi3SWd+nfXOZlX8ND3iHkQfY1RZHL77Ln6kkib4rNzIbP1/FoueHXm+58ueuC23y/RwOqzBZXzhEfBB60ugNMF9ePsDALzCLWFn/DeZ/j0N2lpd0paTP1vpd0tsXesNB72ZiiE+0k3CVf3nlKKa0MXlU1iPjuUaRXRz7GVD7/CQMxiiUXHfVLAWhKfhIM=','10703868:3000557:ba5ad90890a46c389e37129d41ed0e26a652fd62'))
             const getSalutation = await checkSalutation(firstName,lastName)
-
-            console.log("get salutation",getSalutation)
-
-/*             const userData = await userApi.getCurrentUser()
- */        } catch(e) {
-            console.log("error when calling Pipedrive/me",e)
+            const opts = pipedrive.UpdatePerson.constructFromObject({
+                'a06009f2d5291c0f9f754aabbf0464f893958fed': getSalutation
+            })
+            const upadatePerson = personApi.updatePerson(personId,opts)
+        } catch(e) {
+            console.log("error",e)
         }
-    }
+    };
 
-    updatePipedriveField()
-
+    updatePipedriveField();
 })
 
 app.get('/api/installation', async (req, res) => {
@@ -186,6 +165,19 @@ app.get('/api/installation', async (req, res) => {
         console.log(e)
         return res.send('Unable to install the app')
     };
+});
+
+app.get('/api/openSettings', async (req, res) => {
+    const reqId = req.query.id
+    const companyId = req.query.companyId
+    const userId = req.query.userId
+    try {
+        const verifyToken = jwt.verify(req.query.token, process.env.PIPEDRIVE_CLIENT_SECRET);
+        res.redirect(`${appUrl}/?reqId=${reqId}&companyId=${companyId}&userId=${userId}`);
+    } catch (error) {
+        console.error('JWT verification failed:', error);
+        res.status(403).send('JWT token is invalid or expired');
+    }
 });
 
 exports.app = functions.https.onRequest(app)

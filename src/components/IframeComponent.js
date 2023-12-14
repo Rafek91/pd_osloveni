@@ -7,12 +7,13 @@ import 'react-toastify/dist/ReactToastify.css';
 import MessageModal from "./MessageModal";
 import { MdEmail } from "react-icons/md";
 
+console.log('kokot')
 
 function IframeComponent() {
   const serverURL = process.env.REACT_APP_SERVER_URL
 
   const referrer = document.referrer
-  const regexPattern = '.pipedrive.com'
+  const regexPattern = '\.pipedrive.com'
   const testDomain = new RegExp(regexPattern).test(referrer)
 
   const [customFieldsDropdown,setCustomFieldsDropdown] = useState([])
@@ -82,9 +83,6 @@ function IframeComponent() {
     }
   }, [reqId]);
 
-
-  if(!testDomain) {
-
     const submitButton = async () => {
       try {
         if (customFieldsdropdownValue) {
@@ -115,8 +113,6 @@ function IframeComponent() {
       }
     };
 
-
-
     const open = () => {
       setIsOpen(true)
     }
@@ -132,7 +128,6 @@ function IframeComponent() {
             companyId: companyId,
           }),
         })
-
         const token = await generateToken.json()
         console.log(message,token)
       }catch(e) {
@@ -196,15 +191,6 @@ function IframeComponent() {
       </div>
       </>
     )
-  }
-
-  return (
-    <div>
-      <h1>
-        Tuto stránku je možné načíst pouze z domény Pipedrive.com
-      </h1>
-    </div>
-  )
 }
 
-export default IframeComponent;
+export default IframeComponent
