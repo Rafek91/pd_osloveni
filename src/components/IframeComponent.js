@@ -15,17 +15,25 @@ function IframeComponent() {
   const regexPattern = '.pipedrive.com'
   const testDomain = new RegExp(regexPattern).test(referrer)
 
-  const [dropdown,setDropdown] = useState([])
+  const [customFieldsDropdown,setCustomFieldsDropdown] = useState([])
   const [SDK,setSDKinstance] = useState(null)
   const [dropdownAvailability,setDropdownAvailability] = useState(false)
-  const [dropdownValue,setDropdownValue] = useState(null)
+  const [customFieldsdropdownValue,setCustomFieldsdropdownValue] = useState(null)
   const [isOpen,setIsOpen] = useState(false)
+  const [salutationDropdownValue,setSalutationDropdownValue] = useState(null)
 
   const location = useLocation()
   const searchParams = new URLSearchParams(location.search)
   const reqId = searchParams.get('reqId');
   const companyId = searchParams.get('companyId');
   const userId = searchParams.get('userId');
+
+
+  const salutationDropdownOption = [
+    { value: "surnameName", label: "Dobrý den, pane Jane Nováku / Dobrý den, paní Adélo Nováková" },
+    { value: "surname", label: "Dobrý den, pane Nováku / Dobrý den, paní Nováková" },
+    { value: "name", label: "Dobrý den, Martine / Dobrý den, Jano" },
+  ]
 
   const createDropdown = (items) => {
     const optionsStructure = items.data
@@ -44,7 +52,7 @@ function IframeComponent() {
         const request = await fetch(`${serverURL}/organizationFields?userId=${userId}&companyId=${companyId}`)
         const responseData = await request.json()
         const output = await createDropdown(responseData)
-        setDropdown(output)
+        setCustomFieldsdropdownValue(output)
     } catch (e) {
         console.log(e)
     }
@@ -65,7 +73,8 @@ function IframeComponent() {
 
   useEffect(() => {
     fetchOrgFields()
-  },)
+    console.log("rerender")
+  },[])
   
   useEffect(() => {
     if (reqId) {
@@ -78,15 +87,15 @@ function IframeComponent() {
 
     const submitButton = async () => {
       try {
-        if (dropdownValue) {
-          console.log(dropdownValue, userId, companyId);
+        if (customFieldsdropdownValue) {
+          console.log(customFieldsdropdownValue, userId, companyId);
           setDropdownAvailability(true);
     
           const changeHookdeckFilter = await fetch(`${serverURL}/handlePipedriveRequest`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pipedriveFiledKey: dropdownValue.value,
+              pipedriveFiledKey: customFieldsdropdownValue.value,
               userId: userId,
               companyId: companyId,
             }),
@@ -147,23 +156,23 @@ function IframeComponent() {
               </div>
                 <div className="dropdown-container">
                   <Select
-                  options={dropdown}
+                  options={customFieldsDropdown}
                   className="dropdown"
                   placeholder="Vyberte pole oslovení"
                   isDisabled={dropdownAvailability}
-                  value={dropdownValue}
+                  value={customFieldsdropdownValue}
                   onChange={(item)=>{
-                    setDropdownValue(item)
+                    setCustomFieldsdropdownValue(item)
                   }}
                   />
                   <Select
-                  options={dropdown}
+                  options={salutationDropdownOption}
                   className="dropdown"
                   placeholder="Vyberte preferovaný typ oslovení"
                   isDisabled={dropdownAvailability}
-                  value={dropdownValue}
+                  value={salutationDropdownValue}
                   onChange={(item)=>{
-                    setDropdownValue(item)
+                    setSalutationDropdownValue(item)
                   }}
                   />
                 </div>
