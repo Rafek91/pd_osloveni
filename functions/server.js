@@ -6,6 +6,7 @@ const dotenv = require('dotenv').config()
 const pdApiClient = require('./utils/pipedriveApiClient')
 const pipedrive = require('pipedrive')
 const jwt = require('jsonwebtoken');
+const db = require('./utils/db')
 
 const app = express()
 
