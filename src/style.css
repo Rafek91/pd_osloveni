@@ -57,6 +57,10 @@
 }
 
 .dropdown {
+  width: 15dvw;
+}
+
+.dropdown-salutation {
   width: 100%;
 }
 
@@ -93,11 +97,12 @@ div.text p {
 .iframe-container {
   margin-top: 15px;
   display: flex;
-  width: 80%;
+  width: 100%;
   height: max-content;
   flex-direction: column;
   align-items: center;
   margin-bottom: 20px;
+  
 }
 
 iframe {

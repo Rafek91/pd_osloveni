@@ -47,12 +47,13 @@ function IframeComponent() {
     return optionsStructure
   }
 
-  const fetchOrgFields = async () => {
+  const fetchPersonFields = async () => {
     try {
-        const request = await fetch(`${serverURL}/organizationFields?userId=${userId}&companyId=${companyId}`)
+        const request = await fetch(`${serverURL}/personFields?userId=${userId}&companyId=${companyId}`)
         const responseData = await request.json()
         const output = await createDropdown(responseData)
-        setCustomFieldsdropdownValue(output)
+        console.log('output',output)
+        setCustomFieldsDropdown(output)
     } catch (e) {
         console.log(e)
     }
@@ -72,7 +73,7 @@ function IframeComponent() {
   };
 
   useEffect(() => {
-    fetchOrgFields()
+    fetchPersonFields()
     console.log("rerender")
   },[])
   
@@ -83,18 +84,20 @@ function IframeComponent() {
   }, [reqId]);
 
     const submitButton = async () => {
+      console.log(salutationDropdownValue)
       try {
         if (customFieldsdropdownValue) {
-          console.log(customFieldsdropdownValue, userId, companyId);
+          console.log(customFieldsdropdownValue, salutationDropdownValue, userId, companyId);
           setDropdownAvailability(true);
     
-          const changeHookdeckFilter = await fetch(`${serverURL}/handlePipedriveRequest`, {
+          const changeHookdeckFilter = await fetch(`${serverURL}/updateSettings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               pipedriveFiledKey: customFieldsdropdownValue.value,
               userId: userId,
               companyId: companyId,
+              fieldSetting: salutationDropdownValue?.value ? salutationDropdownValue.value : null
             }),
           });
     
@@ -134,7 +137,6 @@ function IframeComponent() {
       }
     }
 
-
     return (
       <>
         <div>
@@ -147,6 +149,8 @@ function IframeComponent() {
             <h1>Nastavení</h1>
               <div className="text">
                 <p>Zvolte prosím, které z vašich polí je určeno pro oslovení. Je nutné, aby toto pole mělo datový typ "Text". <br />Pokud pole ještě nemáte vytvořeno, tak jej prosím vytvořte a pak proveďte výběr.</p>
+                <p>Pomocí druhého nastavení je možné definovat formát oslovení, které se bude doplňovat. <br />Pokud tuto volbu necháte prázdnou, použije se oslovení příjmením.</p>
+                <p style={{"font-style":"italic"}}>Máte v Pipedrive již existující kontakty, u kterých si přejete jednorázově vygenerovat oslovení? Kontaktujte Dáváme a my vám s tím pomůžeme.</p>
               </div>
                 <div className="dropdown-container">
                   <Select
@@ -161,7 +165,7 @@ function IframeComponent() {
                   />
                   <Select
                   options={salutationDropdownOption}
-                  className="dropdown"
+                  className="dropdown-salutation"
                   placeholder="Vyberte preferovaný typ oslovení"
                   isDisabled={dropdownAvailability}
                   value={salutationDropdownValue}
@@ -172,7 +176,7 @@ function IframeComponent() {
                 </div>
                 <button onClick={submitButton}>Potvrdit</button>
                 <button className="button-sendEmail" onClick={open}>
-                 E-mail&nbsp;<MdEmail />
+                 Kontaktujte nás&nbsp;&nbsp;<MdEmail/>
                 </button>
               <div>
           <ToastContainer

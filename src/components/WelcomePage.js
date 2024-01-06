@@ -19,8 +19,8 @@ const WelcomePage = () => {
                     <h1>Instalace dokončena</h1>
                     <p>
                         Děkujeme za instalaci aplikace. Aplikace byla úspěšně nainstalována <br/>
-                        Pro správné fungování aplikace je nutné nastavit, do kterého z pole budete zadávat nebo již zadávate IČO. Bez toho aplikace nedovede poznat doplnění nebo změnu IČA
-                        a nebude správně fungovat.
+                        Pro správné fungování je nutné nastavit, do kterého z polí se bude doplňovat oslovení. Bez toho bychom nevěděli, do kterého pole hodnotu doplnit
+                        a aplikace nebude správně fungovat.
                     </p>
                 </div>  
                 <div className="iframe-container">
@@ -29,7 +29,7 @@ const WelcomePage = () => {
                     webkitallowfullscreen 
                     mozallowfullscreen 
                     allowfullscreen
-                    src="https://www.loom.com/embed/f0a96969ed5a4a6788dad9b7c9a75d08?sid=ded81171-e465-4567-a2ea-403e6dce687c">
+                    src="https://www.loom.com/embed/d32473f0f77646ec93d26dba9da2df0e?sid=62a70dfe-28ef-4bf1-9199-a250191a22d7">
                     </iframe>
                 </div>
                 <button onClick={handleProceed}>Pokračovat do pipedrive</button>
