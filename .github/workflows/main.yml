@@ -39,3 +39,7 @@ jobs:
           args: deploy
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PDOSLOVENI }}
+      - name: Install Dependencies in Functions Directory
+        run: |
+          cd functions
+          npm install
