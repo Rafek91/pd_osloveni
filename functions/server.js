@@ -30,12 +30,12 @@ const createHookdeckWebHook = async (serverUrl,userId,companyId,companyUrl) => {
     try{
         const hookdeckApiUrl = 'https://api.hookdeck.com/2023-07-01/connections'
         const requestBody = {
-            name: `user-${userId}_company-${companyId}`,
+            name: `company-${companyId}`,
             source: {
-                name:`${companyId}_${userId}_${instanceName}_osloveni`
+                name:`${companyId}_${instanceName}_osloveni`
             },
             destination: {
-                name: `${companyId}_${userId}_osloveni`,
+                name: `${companyId}_osloveni`,
                 url: `${serverUrl}/api/webhook/pipedriveWhUpdate`
             },
             rules: [
@@ -50,7 +50,7 @@ const createHookdeckWebHook = async (serverUrl,userId,companyId,companyUrl) => {
                 {
                     type: "transform",
                     transformation: {
-                        name: `${userId}_${companyId}`,
+                        name: `${companyId}`,
                         code: "addHandler(\'transform\', (request, context) => {\r\n    const data = request.body\r\n    const { name: currentName, first_name: firstName, last_name: lastName, id: personId } = request.body.current\r\n    const { user_id: userId, company_id: companyId } = request.body.meta\r\n    const { name: previousName } = request.body.previous ? request.body.previous : {\r\n        name: null\r\n    }\r\n\r\n    if (currentName !== previousName) {\r\n        const dataJson = {\r\n            \'headers\': {\r\n                \'Content-Type\': \'application\/json\'\r\n            },\r\n            \'body\': {\r\n                \'companyId\': companyId,\r\n                \'userId\': userId,\r\n                \'firstName\': firstName,\r\n                \'lastName\': lastName,\r\n                \'personId\': personId,\r\n                \'requestValidation\': \'valid\'\r\n            }\r\n        }\r\n        return dataJson\r\n    }\r\n\r\n    return {\r\n        \'headers\': {\r\n            \'Content-Type\': \'application\/json\'\r\n        },\r\n        \'body\': {\r\n            \'companyId\': companyId,\r\n            \'userId\': userId,\r\n            \'firstName\': firstName,\r\n            \'lastName\': lastName,\r\n            \'personId\': personId,\r\n            \'requestValidation\': \'invalid\'\r\n        }\r\n    }\r\n});"
                     }
                 }
@@ -83,7 +83,7 @@ const createHookdeckWebHook = async (serverUrl,userId,companyId,companyUrl) => {
             console.error('Error message:', error.message);
         }
         console.error('Error config:', error.config);
-        throw error;
+        return null
     };
 }
 
@@ -163,19 +163,20 @@ const checkSalutation = async (firstName,lastName,option) => {
 const storeNewToken = async (name,email,companyName,pdUserId,pdCompanyId,hookdeckWhUrl,hookdeckWhId,accessToken,refreshToken) => {
     const documentRefCompanies =  db.collection('companies')
     const documentRefUsers =  db.collection('users')
-    try{
-        console.time("storeTokenOrg")
-        const createCompanyRecord = await documentRefCompanies.doc(`${pdCompanyId}`).set({
-            osloveni_field_id:'',
-            company_users:[pdUserId],
+    try {
+        console.time("storeTokenBatch");
+
+        // Create a batch
+        const batch = db.batch();
+
+        // Add writes to the batch
+        const companyDocRef = documentRefCompanies.doc(`${pdCompanyId}`);
+        batch.set(companyDocRef, {
+            osloveni_field_id: '',
+            company_users: [pdUserId],
             hookdeck_wh_url: hookdeckWhUrl,
             hookdeck_wh_id: hookdeckWhId,
-            osloveni_settings: 'test'
-        });
-        console.timeEnd("storeTokenOrg")
-        console.time("storeTokenUsr")
-        const createUserRecord = await documentRefUsers.doc(`${pdUserId}_${pdCompanyId}`).set({
-            company_id: pdCompanyId,
+            osloveni_settings: 'test',
             user_access_token: accessToken,
             user_refresh_token: refreshToken,
             hookdeck_wh_url: hookdeckWhUrl,
@@ -184,34 +185,86 @@ const storeNewToken = async (name,email,companyName,pdUserId,pdCompanyId,hookdec
             user_email: email,
             user_company_name: companyName
         });
-        console.timeEnd("storeTokenUsr")
-        return {
-            createCompanyRecord,createUserRecord
-        }
-      } catch (e) {
-        console.log('error occured when saving data to firestore',e)
-      }
-} 
 
-app.post('/testPd', async (req, res) => {
-    console.log(req.body)
-    const {firstName,lastName,person_id:personId,user_id:userId,company_id:companyId} = req.body
+        // Commit the batch
+        await batch.commit();
 
-    const updatePipedriveField = async () => {
-        try{
-            const personApi = new pipedrive.PersonsApi(pdApiClient('v1:AQIBAHj+LzTNK2yuuuaLqifzhWb9crUNKTpk4FlQ9rjnXqp/6AG2kjYcnaOf62rtuKdznqAtAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMLyK+JBzc8G859V3BAgEQgDtqKqOkc+0lOEfcOs4gtQwH/dqrugrLSyItXcEDqK862cZlI4alVBNX/u+LuUyKW7sDHwEX8S3YQOBVIw==:/M4h+zmuL80fpON0UkQir/viLwKDch3ybTBJLvc0M0jE72LxCPY9gmL0UjOB9cu2+brntZ+8SyKXdMvV4vTd3OcQ6ZHReMRfnGsi3SWd+nfXOZlX8ND3iHkQfY1RZHL77Ln6kkib4rNzIbP1/FoueHXm+58ueuC23y/RwOqzBZXzhEfBB60ugNMF9ePsDALzCLWFn/DeZ/j0N2lpd0paTP1vpd0tsXesNB72ZiiE+0k3CVf3nlKKa0MXlU1iPjuUaRXRz7GVD7/CQMxiiUXHfVLAWhKfhIM=','10703868:3000557:ba5ad90890a46c389e37129d41ed0e26a652fd62'))
-            const getSalutation = await checkSalutation(firstName,lastName)
-            const opts = pipedrive.UpdatePerson.constructFromObject({
-                'a06009f2d5291c0f9f754aabbf0464f893958fed': getSalutation
+        console.timeEnd("storeTokenBatch");
+
+        return { success: true };
+    } catch (e) {
+        console.log('error occurred when saving data to Firestore', e);
+        return { success: false, error: e };
+    }
+};
+
+const appUninstall = async (refreshToken,authHeader) => {
+    try {
+            const requestBody = {
+                'token':refreshToken
+            }
+            const uninstallRequest = await axios.post('https://oauth.pipedrive.com/oauth/revoke',requestBody,{
+                headers: { 
+                    'Authorization': authHeader,
+                    'content-type': 'application/x-www-form-urlencoded'
+                }
             })
-            const upadatePerson = personApi.updatePerson(personId,opts)
-        } catch(e) {
-            console.log("error",e)
+            console.log("uninstall request",uninstallRequest)
+        } catch (error) {
+        if (error.response) {
+            console.error('Error status:', error.response.status);
+            console.error('Error data:', error.response.data);
+            console.error('Error status text:', error.response.statusText);
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('No response received');
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
         }
-    };
+        console.error('Error config:', error.config);
+        throw error;
+    }
+}
 
-    updatePipedriveField();
-})
+/* app.get('/testPd', async (req, res) => {
+    const client_id = process.env.PIPEDRIVE_CLIENT_ID
+    const client_secret = process.env.PIPEDRIVE_CLIENT_SECRET
+    const authorizationHeader = `Basic ${Buffer.from(`${client_id}:${client_secret}`).toString('base64')}`
+
+    const rtoken = '3908256:12221862:e3415e90d4bb26c5cc8daa39f353fde400aa6704'
+    const atoken = 'v1u:AQIBAHj-LzTNK2yuuuaLqifzhWb9crUNKTpk4FlQ9rjnXqp_6AG2kjYcnaOf62rtuKdznqAtAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMLyK-JBzc8G859V3BAgEQgDtqKqOkc-0lOEfcOs4gtQwH_dqrugrLSyItXcEDqK862cZlI4alVBNX_u-LuUyKW7sDHwEX8S3YQOBVIw:wNOxHRXQrhdvSLrP3RhTLSrfSFYrCFmZsP1LFsy1JyD-Fd_Oot4rmuRw5WrfMUVyxIjt28M8us18LWk7xFpBRZ7XZlltctHYNyMkGmoyZ-lHHt9KRtmtNKY4_70AZs7Tg3zOQX2l9UEgpXyd_nOzLE7RRbp86PL7UVh0FH-JkKq9IAOp9xZyBhrJFz1ThbqYCQSBlWJ_ynswIFBHIyTdqN0fNdldNKRm369Mbt3DavGM9IY-_qdDpNOPNYkE78PRs7o8XY9gYxvdX1eg2xEVy0anuXvwWEipxXHwA7IXhYyETbM'
+
+    const appUninstall = async () => {
+    try {
+            const requestBody = {
+                'token':rtoken
+            }
+            const uninstallRequest = await axios.post('https://oauth.pipedrive.com/oauth/revoke',requestBody,{
+                headers: { 
+                    'Authorization': authorizationHeader,
+                    'content-type': 'application/x-www-form-urlencoded'
+                }
+            })
+            console.log("uninstall request",uninstallRequest)
+        } catch (error) {
+        if (error.response) {
+            console.error('Error status:', error.response.status);
+            console.error('Error data:', error.response.data);
+            console.error('Error status text:', error.response.statusText);
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('No response received');
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+        }
+        console.error('Error config:', error.config);
+        throw error;
+    }
+}
+appUninstall()
+}) */
 
 app.get('/api/installation', async (req, res) => {
     const requestCode = req.query.code
@@ -234,25 +287,47 @@ app.get('/api/installation', async (req, res) => {
         const accessToken = exchangeToken.data.access_token
         const refreshToken = exchangeToken.data.refresh_token
         const apiClient = pdApiClient(accessToken,refreshToken)
+        const currentUserData = await getPipedriveUserData(apiClient)
+        const { data: {id:pipedriveUserId,company_id:pipedriveCompanyId,name,email,company_name,access}} = currentUserData
+        
+        console.log("access",access)
 
-        const redirectUrl = encodeURIComponent(exchangeToken.data.api_domain)
-        res.redirect(`${appUrl}/welcome?redirectUrl=${redirectUrl}`)
+        const accessValidation = access
+        .filter( item => item.app === 'global')
+        .map( item => item.admin === true ? 'valid' : 'invalid')
+         
+        if(accessValidation[0] === 'valid') {
+            const redirectUrl = `${encodeURIComponent(exchangeToken.data.api_domain)}/settings/marketplace/app/93f56513e52ca2ba/app-settings`
+            const hookdeckWebhook = await createHookdeckWebHook(serverUrl,pipedriveUserId,pipedriveCompanyId,redirectUrl)
 
-        const currentUserData = await getPipedriveUserData(apiClient) // get PD/me data
-        const { data: {id:pipedriveUserId,company_id:pipedriveCompanyId,name,email,company_name}} = currentUserData
-        const hookdeckWebhook = await createHookdeckWebHook(serverUrl,pipedriveUserId,pipedriveCompanyId,redirectUrl) //předělat do jedné velké funkce, která poběží nezávisle na FE ?
-        const saveUserCompanyInfoFirestore = await storeNewToken(name,email,company_name,pipedriveUserId,pipedriveCompanyId,hookdeckWebhook.hookdeckWebhookUrl,hookdeckWebhook.hookdeckConnectionId,exchangeToken.data.access_token,exchangeToken.data.refresh_token)
-        const pipedriveWebhook = await createPipedriveOrganizationWebhook(hookdeckWebhook.hookdeckWebhookUrl,apiClient) //creat PD webhook
+            if (hookdeckWebhook === null) {
+                // Handle the case where createHookdeckWebHook failed
+                console.error('Hookdeck webhook creation failed');
+                res.redirect(`${appUrl}/error`);
+                appUninstall(refreshToken, authorizationHeader);
+                return; // Stop further execution
+            }
 
-        console.log(pipedriveWebhook,saveUserCompanyInfoFirestore);
+            res.redirect(`${appUrl}/welcome?redirectUrl=${redirectUrl}`)
 
-        const sendDataToMake = axios.post('https://hook.eu1.make.com/ume86jpbfh8sy8sflxawzqbe64xq511g',{
-            pipedriveAppName:"Osloveni",
-            pipedriveData:currentUserData
-        });
-    }catch(e) {
+            const saveUserCompanyInfoFirestore = await storeNewToken(name,email,company_name,pipedriveUserId,pipedriveCompanyId,hookdeckWebhook.hookdeckWebhookUrl,hookdeckWebhook.hookdeckConnectionId,exchangeToken.data.access_token,exchangeToken.data.refresh_token)
+            const pipedriveWebhook = await createPipedriveOrganizationWebhook(hookdeckWebhook.hookdeckWebhookUrl,apiClient) //creat PD webhook
+    
+            console.log(pipedriveWebhook,saveUserCompanyInfoFirestore);
+    
+            const sendDataToMake = axios.post('https://hook.eu1.make.com/ume86jpbfh8sy8sflxawzqbe64xq511g',{
+                pipedriveAppName:"Osloveni",
+                pipedriveData:currentUserData
+            });
+        } else {
+            res.redirect(`${appUrl}/error`)
+            appUninstall(refreshToken,authorizationHeader)
+        }
+    }
+    catch(e) {
         console.log(e)
-        return res.send('Unable to install the app')
+        appUninstall(refreshToken,authorizationHeader)
+        res.send('Aplikace je na vaší instanci již nainstalována')
     };
 });
 
@@ -271,24 +346,28 @@ app.get('/api/openSettings', async (req, res) => {
 
 app.get('/api/personFields',  async (req, res) => {
     const {userId,companyId} = req.query
-    const loadUserFromFirestore = async (userId) => {
+    const loadCompanyFromFirestore = async (companyId) => {
         try{
-            const getUser = await db.collection('users').doc(`${userId}_${companyId}`).get()
-            const userData = getUser.data()
-            console.log(userData)
-            return userData
+            const getCompany = await db.collection('companies').doc(`${companyId}`).get()
+            const companyData = getCompany.data()
+            if(companyData) {
+                console.log("data",companyData)
+                return companyData
+            }
+            console.log("nodata",companyData)
+            await new Promise(resolve => setTimeout(resolve,5000));
+            return await loadCompanyFromFirestore(companyId);
         } catch(e) {
            console.log("error when loading person fields from Pipedrive",e)
            throw new Error('Error loading person fields from Pipedrive',)
        }
     }
 
-    const firebaseUserData = await loadUserFromFirestore(userId)
-    const accessToken = firebaseUserData.user_access_token
-    const refreshToken = firebaseUserData.user_refresh_token
+    const firebaseCompanyData = await loadCompanyFromFirestore(companyId)
+    const accessToken = firebaseCompanyData.user_access_token
+    const refreshToken = firebaseCompanyData.user_refresh_token
 
     const apiClient = pdApiClient(accessToken,refreshToken)
-
     const api = new pipedrive.PersonFieldsApi(apiClient)
     const personFields = await api.getPersonFields()
 
@@ -319,6 +398,7 @@ app.post('/api/updateSettings', async (req, res) => {
     updateFirestoreIcoField(pipedriveOsloveniFieldKey,companyId)
 })
 
+
 app.post('/api/webhook/pipedriveWhUpdate', async (req, res) => {
     const {firstName,lastName,personId,userId,companyId} = req.body
 
@@ -327,18 +407,6 @@ app.post('/api/webhook/pipedriveWhUpdate', async (req, res) => {
     
     console.log("post user_id",userId)
 
-    const loadUserFromFirestore = async (userId) => {
-        console.time('load firebase user')
-        try{
-            const getUser = await db.collection('users').doc(`${userId}_${companyId}`).get()
-            const userData = getUser.data()
-            console.log("load user from firestore", userData)
-            console.timeEnd('load firebase user')
-            return userData
-        } catch(e) {
-            console.log('error when loading user from firestore',e)
-       }
-    }
 
     const loadOrgFromFirestore = async (companyId) => {
         try {
@@ -351,13 +419,9 @@ app.post('/api/webhook/pipedriveWhUpdate', async (req, res) => {
         }
     }
     
-    const firebaseUserData = await loadUserFromFirestore(userId)
     const firebaseCompanyData = await loadOrgFromFirestore(companyId)
 
-    const userAccessToken = firebaseUserData.user_access_token
-    const userRefreshToken = firebaseUserData.user_refresh_token
-    const {osloveni_field_id,osloveni_settings} = firebaseCompanyData
-    
+    const {osloveni_field_id,osloveni_settings,user_access_token:userAccessToken,user_refresh_token:userRefreshToken} = firebaseCompanyData
    
     const updatePipedriveField = async () => {
             try{
@@ -378,5 +442,56 @@ app.post('/api/webhook/pipedriveWhUpdate', async (req, res) => {
     updatePipedriveField();
 
 });
+
+app.delete('/api/installation',async (req, res) => {
+    console.log("deleted app",req.body)
+
+    const {user_id:userId,company_id:companyId} = req.body
+    
+    const loadCompanyFirestore = async () => {
+        console.time('load firebase user')
+        try{
+            const getCompany = await db.collection('companies').doc(`${companyId}`).get()
+            const companyData = getCompany.data()
+            console.log("load company from firestore", companyData)
+            console.timeEnd('load firebase user')
+            return companyData
+        } catch(e) {
+            console.log('error when loading user from firestore',e)
+       }
+    }
+
+    try{
+        const firestoreCompanyData = await loadCompanyFirestore()
+        const hookdeckConnectionId = firestoreCompanyData.hookdeck_wh_id
+        
+        const hookdeckRequest = async () => {
+            const loadHookdeckWebhooks = await axios.delete(`https://api.hookdeck.com/2023-07-01/connections/${hookdeckConnectionId}`,{
+            headers: {
+                'Authorization': `Bearer ${process.env.HOOKDECK_API_KEY}`,
+                'content-type': 'application/json'
+            }
+        })
+        const hookdeckResponse = loadHookdeckWebhooks.data
+        console.log("hookdeck deleted connections",hookdeckResponse)
+        } 
+
+        await hookdeckRequest()
+    } catch (error) {
+        if (error.response) {
+            console.error('Error status:', error.response.status);
+            console.error('Error data:', error.response.data);
+            console.error('Error status text:', error.response.statusText);
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('No response received');
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error message:', error.message);
+        }
+        console.error('Error config:', error.config);
+        throw error;
+    }
+})
 
 exports.app = functions.https.onRequest(app)
